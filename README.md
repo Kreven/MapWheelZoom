@@ -13,11 +13,11 @@ Mouse wheel zooming for World of Warcraft Classic Era world map.
 
 ### Zoom Functionality
 
-[<img src="screenshots/1_default.png" alt="Default map view" width="30%">](screenshots/1_default.png) [<img src="screenshots/2_zoomed.png" alt="Zoomed in view" width="30%">](screenshots/2_zoomed.png) [<img src="screenshots/3_max_zoomed.png" alt="Maximum zoom level" width="30%">](screenshots/3_max_zoomed.png)
+[<img src="screenshots/1_default.png" alt="Default map view" width="32.9%">](screenshots/1_default.png) [<img src="screenshots/2_zoomed.png" alt="Zoomed in view" width="32.9%">](screenshots/2_zoomed.png) [<img src="screenshots/3_max_zoomed.png" alt="Maximum zoom level" width="32.9%">](screenshots/3_max_zoomed.png)
 
-### Questie Integration
+### Questie tooltips
 
-[<img src="screenshots/4_default_questie_tooltip.png" alt="Default view with Questie tooltip showing all quests" width="30%">](screenshots/4_default_questie_tooltip.png) [<img src="screenshots/5_zoomed_questie_tooltip.png" alt="Zoomed view with filtered Questie tooltip" width="30%">](screenshots/5_zoomed_questie_tooltip.png) [<img src="screenshots/6_max_zoomed_questie_tooltip.png" alt="Maximum zoom with minimal quest cluster" width="30%">](screenshots/6_max_zoomed_questie_tooltip.png)
+[<img src="screenshots/4_default_questie_tooltip.png" alt="Default view with Questie tooltip showing all quests" width="32.9%">](screenshots/4_default_questie_tooltip.png) [<img src="screenshots/5_zoomed_questie_tooltip.png" alt="Zoomed view with filtered Questie tooltip" width="32.9%">](screenshots/5_zoomed_questie_tooltip.png) [<img src="screenshots/6_max_zoomed_questie_tooltip.png" alt="Maximum zoom with minimal quest cluster" width="32.9%">](screenshots/6_max_zoomed_questie_tooltip.png)
 
 ## ⚡ Performance
 
