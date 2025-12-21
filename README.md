@@ -8,6 +8,8 @@ Mouse wheel zooming for World of Warcraft Classic Era world map.
 
 - **Zoom to Cursor** - Map zooms in/out at your mouse cursor position
 - **Questie Integration** - The quest clusters displayed in the tooltip automatically adjust based on zoom level
+- **Background Transparency** - Control the opacity of the black bars on the sides of the world map
+- **Saved Zoom** - Reopens the map at the same zoom and pan levels. You can disable this in settings.
 
 ## 📸 Screenshots
 
@@ -19,9 +21,21 @@ Mouse wheel zooming for World of Warcraft Classic Era world map.
 
 [<img src="screenshots/4_default_questie_tooltip.png" alt="Default view with Questie tooltip showing all quests" width="32.9%">](screenshots/4_default_questie_tooltip.png) [<img src="screenshots/5_zoomed_questie_tooltip.png" alt="Zoomed view with filtered Questie tooltip" width="32.9%">](screenshots/5_zoomed_questie_tooltip.png) [<img src="screenshots/6_max_zoomed_questie_tooltip.png" alt="Maximum zoom with minimal quest cluster" width="32.9%">](screenshots/6_max_zoomed_questie_tooltip.png)
 
+### Settings
+
+[<img src="screenshots/7_settings.png" alt="Addon settings panel" width="99%">](screenshots/7_settings.png)
+
+## ⚙️ Defaults
+
+- **Show zoom text**: Disabled
+- **Remember zoom**: Enabled
+- **Set background transparency**: Disabled
+- **Background transparency**: 65%
+
+
 ## ⚡ Performance
 
-- **Lightweight** - Uses only ~10-15KB of memory
+- **Lightweight** - Uses only ~20KB of memory
 
 ## 📦 Installation
 
@@ -33,6 +47,7 @@ Mouse wheel zooming for World of Warcraft Classic Era world map.
 
 - **Mouse Wheel** - Scroll to zoom in/out at your cursor position
 - **Click & Drag** - Click and drag to pan the map when zoomed in
+- **Slash Command** - Type `/mwz` to open the options panel
 
 ## 🔧 Compatibility
 
