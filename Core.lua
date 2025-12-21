@@ -5,6 +5,7 @@ local function OnMouseWheel(self, delta)
     local currentScale = scroll:GetCanvasScale()
     local minScale = scroll:GetScaleForMinZoom()
     local maxScale = scroll:GetScaleForMaxZoom()
+    
     -- Dynamic zoom speed: faster when zoomed in for quicker navigation
     local scaleFactor = currentScale / minScale
     local zoomAmount = (scroll.zoomAmountPerMouseWheelDelta or 0.075) * 2 * scaleFactor
@@ -21,45 +22,14 @@ local function OnMouseWheel(self, delta)
     
     if newScale == currentScale then return end
     
+    -- Get cursor position
     local cursorX, cursorY = scroll:GetNormalizedCursorPosition()
     
-    if cursorX and cursorY and (cursorX >= 0 and cursorX <= 1 and cursorY >= 0 and cursorY <= 1) then
-        local oldScrollX = scroll:GetNormalizedHorizontalScroll()
-        local oldScrollY = scroll:GetNormalizedVerticalScroll()
-        
-        -- Cache repeated calculations
-        local cursorOffset = cursorX - 0.5
-        local cursorOffsetY = cursorY - 0.5
-        local oldViewportSize = 1 / currentScale
-        local newViewportSize = 1 / newScale
-        
-        -- Calculate world position under cursor
-        local worldX = oldScrollX + cursorOffset * oldViewportSize
-        local worldY = oldScrollY + cursorOffsetY * oldViewportSize
-        
-        -- Calculate new scroll position to keep world point under cursor
-        local newScrollX = worldX - cursorOffset * newViewportSize
-        local newScrollY = worldY - cursorOffsetY * newViewportSize
-        
-        -- Set instant zoom (very high lerp = instant)
-        scroll.normalizedZoomLerpAmount = 999
-        scroll.normalizedPanXLerpAmount = 999
-        scroll.normalizedPanYLerpAmount = 999
-        
-        scroll:SetZoomTarget(newScale)
-        
-        -- Calculate scroll extents at new scale
-        local tempScale = scroll.currentScale
-        scroll.currentScale = newScale
-        scroll:CalculateScrollExtents()
-        scroll.currentScale = tempScale
-        
-        -- Clamp scroll to valid bounds using math functions
-        newScrollX = math.max(scroll.scrollXExtentsMin or 0.5, math.min(newScrollX, scroll.scrollXExtentsMax or 0.5))
-        newScrollY = math.max(scroll.scrollYExtentsMin or 0.5, math.min(newScrollY, scroll.scrollYExtentsMax or 0.5))
-        
-        scroll:SetPanTarget(newScrollX, newScrollY)
+    -- Zoom and pan
+    if cursorX and cursorY then
+        scroll:InstantPanAndZoom(newScale, cursorX, cursorY)
     else
+        -- Fallback to default zoom if cursor position cannot be determined
         if delta > 0 then
             scroll:ZoomIn()
         else
