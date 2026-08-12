@@ -1,3 +1,5 @@
+local lastPlayerMapID = nil
+
 local lastShowTime = 0
 local function SaveMapState()
     if not MapWheelZoomDB or not MapWheelZoomDB.rememberZoom then return end
@@ -95,7 +97,29 @@ local function Init()
     scroll.GetScaleForMaxZoom = function(self)
         return originalGetScaleForMaxZoom(self) * 3
     end
-    
+
+    -- Fix: Anniversary client doesn't render pure black on BlackoutFrame.Blackout texture.
+    if WorldMapFrame.BlackoutFrame and WorldMapFrame.BlackoutFrame.Blackout then
+        WorldMapFrame.BlackoutFrame.Blackout:SetColorTexture(0.01, 0, 0, 1)
+    end
+
+    -- Apply side bar (blackout frame) transparency settings
+    local function ApplyBlackoutAlpha()
+        if WorldMapFrame.BlackoutFrame and MapWheelZoomDB then
+            if MapWheelZoomDB.overrideSideBarOpacity then
+                WorldMapFrame.BlackoutFrame:SetAlpha(MapWheelZoomDB.blackBarOpacity / 100)
+            else
+                WorldMapFrame.BlackoutFrame:SetAlpha(1.0)
+            end
+        end
+    end
+
+    if WorldMapFrame.BlackoutFrame then
+        hooksecurefunc(WorldMapFrame.BlackoutFrame, "Show", function()
+            ApplyBlackoutAlpha()
+        end)
+    end
+
     -- Create zoom text
     local zoomText = WorldMapFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     zoomText:SetPoint("BOTTOMLEFT", WorldMapFrame, "BOTTOMLEFT", 20, 10)
@@ -120,19 +144,86 @@ local function Init()
         end
     end
 
+    -- Map window transparency system with movement detection
+    local applyingAlpha = false
+    local currentMapAlpha = 1.0
+    local ALPHA_LERP_SPEED = 8
+    
+    local function GetTargetMapAlpha()
+        if not MapWheelZoomDB then return 1.0 end
+        
+        -- Movement transparency takes priority
+        local isMoving = GetUnitSpeed("player") > 0
+        if isMoving and MapWheelZoomDB.movingTransparency then
+            return MapWheelZoomDB.movingAlpha / 100
+        end
+        
+        -- Static transparency
+        if MapWheelZoomDB.mapWindowTransparency then
+            return MapWheelZoomDB.mapWindowAlpha / 100
+        end
+        
+        return 1.0
+    end
+    
+    local function ForceSetAlpha(alpha)
+        applyingAlpha = true
+        WorldMapFrame:SetAlpha(alpha)
+        applyingAlpha = false
+        currentMapAlpha = alpha
+    end
+    
+    -- Prevent Blizzard from silently resetting alpha
+    hooksecurefunc(WorldMapFrame, "SetAlpha", function(self, alpha)
+        if applyingAlpha then return end
+        if not MapWheelZoomDB then return end
+        if not WorldMapFrame:IsShown() then return end
+        if MapWheelZoomDB.mapWindowTransparency or MapWheelZoomDB.movingTransparency then
+            C_Timer.After(0, function()
+                if WorldMapFrame:IsShown() then
+                    ForceSetAlpha(GetTargetMapAlpha())
+                end
+            end)
+        end
+    end)
+    
+    function MapWheelZoom_UpdateMapAlpha()
+        if WorldMapFrame and WorldMapFrame:IsShown() then
+            ForceSetAlpha(GetTargetMapAlpha())
+        end
+    end
+
+    -- Smooth alpha transitions
+    WorldMapFrame:HookScript("OnUpdate", function(self, elapsed)
+        if not MapWheelZoomDB then return end
+        
+        local targetAlpha = GetTargetMapAlpha()
+        local diff = targetAlpha - currentMapAlpha
+        
+        if math.abs(diff) > 0.005 then
+            currentMapAlpha = currentMapAlpha + diff * math.min(elapsed * ALPHA_LERP_SPEED, 1)
+            applyingAlpha = true
+            self:SetAlpha(currentMapAlpha)
+            applyingAlpha = false
+        elseif math.abs(diff) > 0 then
+            ForceSetAlpha(targetAlpha)
+        end
+    end)
+
     -- Restoration and zoom text updates
+    WorldMapFrame:HookScript("OnSizeChanged", UpdateZoomText)
     WorldMapFrame:HookScript("OnShow", function()
         lastShowTime = GetTime()
         UpdateZoomText()
         
+        lastPlayerMapID = C_Map and C_Map.GetBestMapForUnit and C_Map.GetBestMapForUnit("player")
+        
+        -- Set transparency immediately (no fade-in when opening)
+        local targetAlpha = GetTargetMapAlpha()
+        ForceSetAlpha(targetAlpha)
+
         -- Apply side bar opacity
-        if WorldMapFrame.BlackoutFrame and MapWheelZoomDB then
-            if MapWheelZoomDB.overrideSideBarOpacity then
-                WorldMapFrame.BlackoutFrame:SetAlpha(MapWheelZoomDB.blackBarOpacity / 100)
-            else
-                WorldMapFrame.BlackoutFrame:SetAlpha(1.0)
-            end
-        end
+        ApplyBlackoutAlpha()
         
         if not MapWheelZoomDB or not MapWheelZoomDB.rememberZoom then return end
         
@@ -161,7 +252,9 @@ local function Init()
     
     -- Update zoom text when map is hidden
     WorldMapFrame:HookScript("OnHide", function() 
-        zoomText:Hide() 
+        zoomText:Hide()
+        -- Restore full opacity so other frames are unaffected
+        ForceSetAlpha(1.0)
     end)
     
     -- Update zoom text when zoom changes
@@ -183,28 +276,86 @@ local function Init()
     
     -- Initial update
     UpdateZoomText()
-    
-    -- Feature: Map side bars (blackout frame) control
-    if WorldMapFrame.BlackoutFrame then
-        hooksecurefunc(WorldMapFrame.BlackoutFrame, "Show", function(self)
-            if MapWheelZoomDB then
-                if MapWheelZoomDB.overrideSideBarOpacity then
-                    self:SetAlpha(MapWheelZoomDB.blackBarOpacity / 100)
-                else
-                    self:SetAlpha(1.0)
-                end
-            end
-        end)
-        
-        -- Initial apply
-        if MapWheelZoomDB.overrideSideBarOpacity then
-            WorldMapFrame.BlackoutFrame:SetAlpha(MapWheelZoomDB.blackBarOpacity / 100)
-        else
-            WorldMapFrame.BlackoutFrame:SetAlpha(1.0)
-        end
-    end
+    ApplyBlackoutAlpha()
 end
 
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("PLAYER_LOGIN")
 frame:SetScript("OnEvent", Init)
+
+-- Auto-close map when entering combat & reopen when combat ends
+local wasMapClosedByCombat = false
+
+local combatFrame = CreateFrame("Frame")
+combatFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
+combatFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+combatFrame:SetScript("OnEvent", function(self, event)
+    if not MapWheelZoomDB or not MapWheelZoomDB.closeOnCombat then return end
+
+    if event == "PLAYER_REGEN_DISABLED" then
+        if WorldMapFrame and WorldMapFrame:IsShown() then
+            wasMapClosedByCombat = true
+            if HideUIPanel then HideUIPanel(WorldMapFrame) end
+            WorldMapFrame:Hide()
+        else
+            wasMapClosedByCombat = false
+        end
+    elseif event == "PLAYER_REGEN_ENABLED" then
+        if wasMapClosedByCombat then
+            wasMapClosedByCombat = false
+            if WorldMapFrame and not WorldMapFrame:IsShown() then
+                if ToggleWorldMap then
+                    ToggleWorldMap()
+                elseif OpenWorldMap then
+                    OpenWorldMap()
+                elseif ShowUIPanel then
+                    ShowUIPanel(WorldMapFrame)
+                else
+                    WorldMapFrame:Show()
+                end
+            end
+        end
+    end
+end)
+
+-- Auto-switch map to current zone when moving into a new area
+local lastCheckTime = 0
+local function CheckZoneChange()
+    if not MapWheelZoomDB or not MapWheelZoomDB.autoSwitchZone then return end
+    if not WorldMapFrame or not WorldMapFrame:IsShown() then return end
+
+    local playerMapID = C_Map and C_Map.GetBestMapForUnit and C_Map.GetBestMapForUnit("player")
+    if not playerMapID or playerMapID <= 0 then return end
+
+    local currentMapID = WorldMapFrame:GetMapID()
+    if not currentMapID then return end
+
+    if not lastPlayerMapID then
+        lastPlayerMapID = playerMapID
+    end
+
+    -- Auto-switch map ONLY if the map currently being viewed is the map where the player is located.
+    if currentMapID == lastPlayerMapID or currentMapID == playerMapID then
+        if currentMapID ~= playerMapID then
+            WorldMapFrame:SetMapID(playerMapID)
+        end
+    end
+
+    lastPlayerMapID = playerMapID
+end
+
+local zoneFrame = CreateFrame("Frame")
+zoneFrame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+zoneFrame:RegisterEvent("ZONE_CHANGED")
+zoneFrame:RegisterEvent("ZONE_CHANGED_INDOORS")
+zoneFrame:SetScript("OnEvent", CheckZoneChange)
+
+WorldMapFrame:HookScript("OnUpdate", function(self, elapsed)
+    if not MapWheelZoomDB or not MapWheelZoomDB.autoSwitchZone then return end
+    if GetTime() - lastCheckTime < 1.0 then return end
+    lastCheckTime = GetTime()
+
+    if GetUnitSpeed("player") > 0 then
+        CheckZoneChange()
+    end
+end)

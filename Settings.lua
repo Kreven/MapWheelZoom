@@ -1,11 +1,19 @@
 local addonName = ...
+local settingsCategory
 
 -- Default settings
 local defaults = {
     showZoomText = false,
+    showMapButton = true,
     rememberZoom = true,
+    closeOnCombat = false,
+    autoSwitchZone = false,
     overrideSideBarOpacity = false,
     blackBarOpacity = 65,
+    mapWindowTransparency = false,
+    mapWindowAlpha = 80,
+    movingTransparency = false,
+    movingAlpha = 40,
 }
 
 -- Initialize saved variables and create settings panel
@@ -21,7 +29,6 @@ EventUtil.ContinueOnAddOnLoaded(addonName, function()
     
     -- Initialize zoom persistence variables
     MapWheelZoomDB.savedZoom = MapWheelZoomDB.savedZoom or {}
-    MapWheelZoomDB.lastMapID = MapWheelZoomDB.lastMapID or nil
     
     -- Create options panel using Settings API
     local optionsFrame = CreateFrame("Frame", nil, nil, "VerticalLayoutFrame")
@@ -29,7 +36,7 @@ EventUtil.ContinueOnAddOnLoaded(addonName, function()
     
     local categoryName = "|TInterface/Addons/MapWheelZoom/Art/Icon:14:14:0:0|t MapWheelZoom"
     local category, layout = Settings.RegisterCanvasLayoutCategory(optionsFrame, categoryName)
-    category.ID = "MapWheelZoom"
+    settingsCategory = category
     Settings.RegisterAddOnCategory(category)
     
     local layoutIndex = 0
@@ -83,13 +90,15 @@ EventUtil.ContinueOnAddOnLoaded(addonName, function()
     end
     
     -- Function to create a slider with title and value display
+    local sliderCounter = 0
     local function CreateSlider(label, dbKey, minVal, maxVal, step, callback)
+        sliderCounter = sliderCounter + 1
         local sliderFrame = CreateFrame("Frame", nil, optionsFrame)
         sliderFrame:SetSize(400, 50)
         sliderFrame.layoutIndex = GetLayoutIndex()
         --sliderFrame.bottomPadding = 8
 
-        local sliderName = "MapWheelZoomOpacitySlider"
+        local sliderName = "MapWheelZoomSlider" .. sliderCounter
         local slider = CreateFrame("Slider", sliderName, sliderFrame, "BackdropTemplate, OptionsSliderTemplate")
         slider:SetPoint("LEFT", 25, 20)
         slider:SetSize(280, 16)
@@ -144,6 +153,18 @@ EventUtil.ContinueOnAddOnLoaded(addonName, function()
         "Displayed in the bottom-left corner of the map", 
         "showZoomText"
     )
+
+    -- Show Map Button checkbox
+    CreateCheckbox(
+        "Show map button", 
+        "Displayed in the bottom-left corner of the map", 
+        "showMapButton",
+        function(checked)
+            if MapWheelZoom_UpdateMapButtonVisibility then
+                MapWheelZoom_UpdateMapButtonVisibility()
+            end
+        end
+    )
     
     -- Remember Zoom checkbox
     CreateCheckbox(
@@ -179,12 +200,86 @@ EventUtil.ContinueOnAddOnLoaded(addonName, function()
             end
         end
     )
+
+    -- Map window transparency checkbox
+    CreateCheckbox(
+        "Map window transparency",
+        "Makes the entire map window semi-transparent",
+        "mapWindowTransparency",
+        function(checked)
+            if WorldMapFrame and WorldMapFrame:IsShown() then
+                WorldMapFrame:SetAlpha(checked and (MapWheelZoomDB.mapWindowAlpha / 100) or 1.0)
+            end
+        end
+    )
+
+    -- Map window opacity slider
+    CreateSlider(
+        "Map window opacity",
+        "mapWindowAlpha",
+        10, 100, 5,
+        function(val)
+            if WorldMapFrame and WorldMapFrame:IsShown() and MapWheelZoomDB.mapWindowTransparency then
+                WorldMapFrame:SetAlpha(val / 100)
+            end
+        end
+    )
+
+    -- Moving transparency checkbox
+    CreateCheckbox(
+        "Transparency while moving",
+        "Map becomes more transparent while your character is moving",
+        "movingTransparency",
+        function(checked)
+            if MapWheelZoom_UpdateMapAlpha then
+                MapWheelZoom_UpdateMapAlpha()
+            end
+        end
+    )
+
+    -- Moving opacity slider
+    CreateSlider(
+        "Opacity while moving",
+        "movingAlpha",
+        10, 100, 5,
+        function(val)
+            if MapWheelZoom_UpdateMapAlpha then
+                MapWheelZoom_UpdateMapAlpha()
+            end
+        end
+    )
+
+    -- Close map on combat checkbox
+    CreateCheckbox(
+        "Close map on combat", 
+        "Automatically closes the map when entering combat, and reopens it when combat ends", 
+        "closeOnCombat"
+    )
+
+    -- Auto-switch map on zone change checkbox
+    CreateCheckbox(
+        "Auto-switch map on zone change", 
+        "Automatically updates the map to your current zone when moving into a new area", 
+        "autoSwitchZone"
+    )
     
     optionsFrame:Layout()
 end)
 
+function MapWheelZoom_OpenSettings()
+    if WorldMapFrame and WorldMapFrame:IsShown() then
+        HideUIPanel(WorldMapFrame)
+    end
+    if settingsCategory then
+        Settings.OpenToCategory(settingsCategory:GetID())
+    end
+end
+
 -- Slash command to open settings
 SLASH_MAPWHEELZOOM1 = "/mwz"
-SlashCmdList["MAPWHEELZOOM"] = function()
-    Settings.OpenToCategory("MapWheelZoom")
+SLASH_MAPWHEELZOOM2 = "/mapwheelzoom"
+SlashCmdList["MAPWHEELZOOM"] = function(msg)
+    MapWheelZoom_OpenSettings()
 end
+
+

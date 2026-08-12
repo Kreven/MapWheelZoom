@@ -1,11 +1,13 @@
-## Interface: 11508, 20505
+## Interface: 11509, 20506
 ## Title: Map Wheel Zoom
 ## Notes: Enables mouse wheel zooming on the World Map. |n|n|cff82c5ffFrom |TInterface/Addons/MapWheelZoom/Art/Ua:12:12|t |cff82c5ffwith love
 ## Author: KrevenRess
-## Version: 1.1.1
+## Version: 1.2.1
 ## SavedVariables: MapWheelZoomDB
 ## IconTexture: Interface\AddOns\MapWheelZoom\Art\Icon.tga
 
 Core.lua
 Settings.lua
+MapButton.lua
 QuestieIntegration.lua
+TomTomIntegration.lua
