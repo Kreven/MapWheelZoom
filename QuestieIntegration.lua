@@ -21,13 +21,26 @@ local function GetQuestieTargetFrameLevel()
     return GetPinFrameLevel("PIN_FRAME_LEVEL_GROUP_MEMBER", 754) - 1
 end
 
+local function SetQuestieFrameLevel(frame)
+    if not frame or not frame.SetFrameLevel then return end
+    if frame.SetFixedFrameLevel then
+        frame:SetFixedFrameLevel(false)
+    end
+    local currentLevel = (frame.GetFrameLevel and frame:GetFrameLevel()) or 2016
+    local offset = currentLevel - 2016
+    if offset < 0 then offset = 0 end
+    local targetLevel = math.min(2750 + offset, 2753)
+    frame:SetFrameLevel(targetLevel)
+    if frame.SetFixedFrameLevel then
+        frame:SetFixedFrameLevel(true)
+    end
+end
+
 local function FixPinInstance(frame)
     if not frame or frame._mwz_fixed then return end
     
-    -- Keep Questie icons at PIN_FRAME_LEVEL_GROUP_MEMBER - 1
-    if frame.SetFrameLevel then
-        frame:SetFrameLevel(GetQuestieTargetFrameLevel())
-    end
+    -- Keep Questie icons at target FrameLevel above TomTom and below group members
+    SetQuestieFrameLevel(frame)
     
     -- Override SetParent to redirect all parenting calls to ScrollContainer.Child
     local originalSetParent = frame.SetParent
@@ -103,16 +116,21 @@ local function InitQuestieIntegration()
     local QuestieMap = QuestieLoader:ImportModule("QuestieMap")
     if QuestieMap and QuestieMap.utils and QuestieMap.utils.SetDrawOrder then
         local originalSetDrawOrder = QuestieMap.utils.SetDrawOrder
-        QuestieMap.utils.SetDrawOrder = function(self, frame)
+        QuestieMap.utils.SetDrawOrder = function(a1, a2)
+            local frame = (type(a2) == "table" and a2) or (type(a1) == "table" and a1)
+            if not frame then
+                return originalSetDrawOrder(a1, a2)
+            end
+
             if not frame.miniMapIcon then
                 FixPinInstance(frame)
             end
             
-            originalSetDrawOrder(self, frame)
+            originalSetDrawOrder(a1, a2)
             
-            -- Re-enforce target frame level so Questie icons render just below group members (2753)
-            if not frame.miniMapIcon and frame.SetFrameLevel then
-                frame:SetFrameLevel(GetQuestieTargetFrameLevel())
+            -- Re-enforce target frame level so Questie icons render just below group members
+            if not frame.miniMapIcon then
+                SetQuestieFrameLevel(frame)
             end
             
             -- Re-enforce parent after Questie's modifications

@@ -2,7 +2,7 @@
 ## Title: Map Wheel Zoom
 ## Notes: Enables mouse wheel zooming on the World Map. |n|n|cff82c5ffFrom |TInterface/Addons/MapWheelZoom/Art/Ua:12:12|t |cff82c5ffwith love
 ## Author: KrevenRess
-## Version: 1.2.1
+## Version: 1.2.2
 ## SavedVariables: MapWheelZoomDB
 ## IconTexture: Interface\AddOns\MapWheelZoom\Art\Icon.tga
 
